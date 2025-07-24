@@ -1,18 +1,22 @@
 package main
 
 import (
+  "log"
   "net/http"
 )
 
 
 
 func main() {
+  const port = "8080"
+
   mux := http.NewServeMux()
 
   server := &http.Server{
-    Addr: ":8080",
+    Addr: ":" + port,
     Handler: mux, 
   }
 
-  server.ListenAndServe()
+  log.Printf("Server Running on port %s\n", port)
+  log.Fatal(server.ListenAndServe())
 }
