@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -41,6 +42,7 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", healthCheckHandler)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.reset)
+	mux.HandleFunc("POST /api/validate_chirp", apiCfg.handlerCheckChirpy)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -70,4 +72,58 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 				</body>
 			</html>`, cfg.fileserverHits.Load())
 	w.Write([]byte(msg))
+}
+
+func (cfg *apiConfig) handlerCheckChirpy(w http.ResponseWriter, r *http.Request) {
+	type param struct {
+		Body string `json:"body"`
+	}
+	type errorResponse struct {
+		Error string `json:"error"`
+	}
+	type regularReponse struct {
+		Valid bool `json:"valid"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	params := param{}
+	err := decoder.Decode(&params)
+
+	if err != nil {
+		// an error will be thrown if the JSON is invalid or has the wrong types
+		// any missing fields will simply have their values in the struct set to their zero value
+		log.Printf("Error decoding parameters: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+
+	if len(params.Body) > 140 {
+		w.WriteHeader(http.StatusBadRequest)
+		errMessage := errorResponse{
+			Error: "Chirp is too long",
+		}
+		dat, err := json.Marshal(errMessage)
+		if err != nil {
+			log.Printf("Error marshalling JSON: %s", err)
+			w.WriteHeader(500)
+			return
+		}
+		w.Write(dat)
+		return
+	}
+
+	respBody := regularReponse{
+		Valid: true,
+	}
+
+	dat, err := json.Marshal(respBody)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(dat)
+
 }
