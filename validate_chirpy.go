@@ -28,6 +28,7 @@ func (cfg *apiConfig) handlerCheckChirpy(w http.ResponseWriter, r *http.Request)
 	}
 
 	RespondWithJson(w, 200, regularReponse{
-		Valid: true,
+		Valid:       true,
+		CleanedBody: CleanInput(params.Body),
 	})
 }
