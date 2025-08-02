@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,18 +10,18 @@ import (
 	"github.com/justinyeh1995/go-web-server-template/internal/database"
 )
 
+type Chirpy struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func (cfg *apiConfig) handlerCreateChirpy(w http.ResponseWriter, r *http.Request) {
 	type param struct {
-		Body   string `json:"body"`
-		UserID string `json:"user_id"`
-	}
-
-	type Chirpy struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -42,14 +41,8 @@ func (cfg *apiConfig) handlerCreateChirpy(w http.ResponseWriter, r *http.Request
 	}
 
 	chirpy, err := cfg.db.CreateChirpy(r.Context(), database.CreateChirpyParams{
-		Body: sql.NullString{
-			String: params.Body,
-			Valid:  true,
-		},
-		UserID: sql.NullString{
-			String: params.UserID,
-			Valid:  true,
-		},
+		Body:   params.Body,
+		UserID: params.UserID,
 	})
 	if err != nil {
 		// log.Fatalf("Error creating chirpy, with err msg %v", err)
@@ -57,24 +50,59 @@ func (cfg *apiConfig) handlerCreateChirpy(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chirpyID, err := uuid.Parse(chirpy.ID)
-	if err != nil {
-		// log.Fatalf("Error parsing chirpy id, with err msg %v", err)
-		ResponseWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error parsing chirpy id, with err msg %v", err))
-		return
-	}
-	userID, err := uuid.Parse(chirpy.UserID.String)
-	if err != nil {
-		// log.Fatalf("Error parsing chirpy's user id, with err msg %v", err)
-		ResponseWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error parsing chirpy's user id, with err msg %v", err))
-		return
-	}
 	// 3) Save it to the database
 	RespondWithJson(w, http.StatusCreated, Chirpy{
-		ID:        chirpyID,
+		ID:        chirpy.ID,
 		CreatedAt: chirpy.CreatedAt.Time,
 		UpdatedAt: chirpy.UpdatedAt.Time,
-		Body:      chirpy.Body.String,
-		UserID:    userID,
+		Body:      chirpy.Body,
+		UserID:    chirpy.UserID,
+	})
+}
+
+func (cfg *apiConfig) handlerListChirpies(w http.ResponseWriter, r *http.Request) {
+	chirpies, err := cfg.db.ListChirpies(r.Context())
+	if err != nil {
+		ResponseWithError(w, http.StatusInternalServerError, "Error listing all chirpies!")
+		return
+	}
+	res := []Chirpy{}
+	for _, chirpy := range chirpies {
+		res = append(res, Chirpy{
+			ID:        chirpy.ID,
+			CreatedAt: chirpy.CreatedAt.Time,
+			UpdatedAt: chirpy.UpdatedAt.Time,
+			Body:      chirpy.Body,
+			UserID:    chirpy.UserID,
+		})
+	}
+
+	RespondWithJson(w, http.StatusOK, res)
+}
+
+func (cfg *apiConfig) handlerGetChirpyByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("chirpID")
+	if id == "" {
+		ResponseWithError(w, http.StatusInternalServerError, "Path value is empty!")
+		return
+	}
+	chirpyID, err := uuid.Parse(id)
+	if err != nil {
+		ResponseWithError(w, http.StatusBadRequest, "Invalid chirp ID")
+		return
+	}
+
+	chirpy, err := cfg.db.GetChirpyByID(r.Context(), chirpyID)
+	if err != nil {
+		ResponseWithError(w, http.StatusNotFound, fmt.Sprintf("Error getting ChirpyID %s, it does not exist in the databse!", chirpyID))
+		return
+	}
+
+	RespondWithJson(w, http.StatusOK, Chirpy{
+		ID:        chirpy.ID,
+		CreatedAt: chirpy.CreatedAt.Time,
+		UpdatedAt: chirpy.UpdatedAt.Time,
+		Body:      chirpy.Body,
+		UserID:    chirpy.UserID,
 	})
 }
