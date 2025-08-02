@@ -3,8 +3,8 @@ CREATE TABLE chirpies (
     id TEXT,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
-    body TEXT,
-    user_id TEXT,
+    body TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     CONSTRAINT chirpies_pk PRIMARY KEY (id),
     CONSTRAINT chirpies_users_fk 
         FOREIGN KEY (user_id) 

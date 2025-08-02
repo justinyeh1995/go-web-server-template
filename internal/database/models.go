@@ -8,8 +8,16 @@ import (
 	"database/sql"
 )
 
+type Chirpy struct {
+	ID        string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+	Body      sql.NullString
+	UserID    sql.NullString
+}
+
 type User struct {
-	ID        sql.NullString
+	ID        string
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
 	Email     sql.NullString
