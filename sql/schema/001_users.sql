@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE users (
-    id TEXT,
+    id TEXT PRIMARY KEY,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     email TEXT
