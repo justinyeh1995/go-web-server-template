@@ -7,7 +7,8 @@ package database
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 const createChirpy = `-- name: CreateChirpy :one
@@ -23,8 +24,8 @@ RETURNING id, created_at, updated_at, body, user_id
 `
 
 type CreateChirpyParams struct {
-	Body   sql.NullString
-	UserID sql.NullString
+	Body   string
+	UserID uuid.UUID
 }
 
 func (q *Queries) CreateChirpy(ctx context.Context, arg CreateChirpyParams) (Chirpy, error) {
@@ -47,4 +48,58 @@ DELETE FROM chirpies
 func (q *Queries) DeleteAllChirpies(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllChirpies)
 	return err
+}
+
+const getChirpyByID = `-- name: GetChirpyByID :one
+SELECT id, created_at, updated_at, body, user_id
+FROM chirpies
+WHERE id = $1
+`
+
+func (q *Queries) GetChirpyByID(ctx context.Context, id uuid.UUID) (Chirpy, error) {
+	row := q.db.QueryRowContext(ctx, getChirpyByID, id)
+	var i Chirpy
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const listChirpies = `-- name: ListChirpies :many
+SELECT id, created_at, updated_at, body, user_id 
+FROM chirpies
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListChirpies(ctx context.Context) ([]Chirpy, error) {
+	rows, err := q.db.QueryContext(ctx, listChirpies)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirpy
+	for rows.Next() {
+		var i Chirpy
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
