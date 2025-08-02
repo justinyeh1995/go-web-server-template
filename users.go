@@ -38,7 +38,7 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		ResponseWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error Creating the User with email: %s. Error: %v", email, err))
 		return
 	}
-	id, err := uuid.Parse(user.ID.String)
+	id, err := uuid.Parse(user.ID)
 	if err != nil {
 		ResponseWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error Parsing Users uuid: %v.", err))
 		return
