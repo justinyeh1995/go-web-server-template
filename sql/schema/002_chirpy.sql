@@ -1,10 +1,10 @@
 -- +goose Up
 CREATE TABLE chirpies (
-    id TEXT,
+    id UUID,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     body TEXT NOT NULL,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL,
     CONSTRAINT chirpies_pk PRIMARY KEY (id),
     CONSTRAINT chirpies_users_fk 
         FOREIGN KEY (user_id) 
